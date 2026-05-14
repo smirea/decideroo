@@ -858,7 +858,7 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 		setResults([]);
 		setShowGroupResults(false);
 		setShowPlayerName(!skipIntro && !syncedName);
-		setShowVersusIntro(!skipIntro && !syncedName);
+		setShowVersusIntro(!skipIntro && Boolean(syncedName));
 	}, [playerName, skipIntro]);
 	const savePlayerProgress = useCallback(
 		(progress: PlayerProgress, name = playerName) => {
@@ -941,10 +941,16 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 		loadedPlayerRef.current = syncedName;
 		void reloadPlayer(syncedName).then(player => {
 			if (player) {
-				applyPlayerProgress(player);
+				if (hasSavedProgress(player)) {
+					applyPlayerProgress(player);
+					return;
+				}
+
+				setShowVersusIntro(true);
 				return;
 			}
 
+			setShowVersusIntro(true);
 			void sendAction({ type: 'join', name: syncedName });
 		});
 	}, [applyPlayerProgress, playerName, reloadPlayer, sendAction, showPlayerName, skipIntro]);
