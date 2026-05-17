@@ -843,6 +843,7 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 			setResults(player.results);
 			setShowGroupResults(Boolean(player.endScreenAt && isPlayerDone(player, quizSet)));
 			setShowPlayerName(false);
+			setSoundState(current => ({ ...current, showIntro: false }));
 			setShowVersusIntro(false);
 		},
 		[quizSet],
@@ -857,6 +858,7 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 		setLiveScreenScore(scoreInputToPoints({}));
 		setResults([]);
 		setShowGroupResults(false);
+		setSoundState(current => ({ ...current, showIntro: !skipIntro }));
 		setShowPlayerName(!skipIntro && !syncedName);
 		setShowVersusIntro(!skipIntro && Boolean(syncedName));
 	}, [playerName, skipIntro]);
@@ -946,10 +948,12 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 					return;
 				}
 
+				setSoundState(current => ({ ...current, showIntro: true }));
 				setShowVersusIntro(true);
 				return;
 			}
 
+			setSoundState(current => ({ ...current, showIntro: true }));
 			setShowVersusIntro(true);
 			void sendAction({ type: 'join', name: syncedName });
 		});
