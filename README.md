@@ -2,7 +2,7 @@
 
 
 
-# Decidaroo
+# Decideroo
 
 When 2 of your friends create 2 different apps to help decide what to do and you then need to decide how to decide 
 
