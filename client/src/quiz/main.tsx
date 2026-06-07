@@ -37,12 +37,12 @@ const themeSongs = [
 		title: 'Too many ways to decide how to decide',
 		file: 'Decideroo - Too many ways to decide how to decide.mp3',
 	},
-	{ title: 'Beckam goes in the army', file: 'Decideroo - Beckam goes in the army.mp3' },
+	{ title: "Can't tell your mouth from your butt", file: "Decideroo - Can't tell your mouth from your butt.mp3" },
 	{
 		title: 'Take my shoes off with my eyes closed',
 		file: 'Decideroo - Take my shoes off with my eyes closed.mp3',
 	},
-	{ title: "Can't tell your mouth from your butt", file: "Decideroo - Can't tell your mouth from your butt.mp3" },
+	{ title: 'Beckam goes in the army', file: 'Decideroo - Beckam goes in the army.mp3' },
 ] as const;
 const versusSoundUrl = '/sfx/vs-intro.wav';
 const soundChoiceSkipMs = 24 * 60 * 60 * 1000;
