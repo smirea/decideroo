@@ -1,10 +1,6 @@
+# Decidaroo
 
-
-
-
-# Decideroo
-
-When 2 of your friends create 2 different apps to help decide what to do and you then need to decide how to decide 
+When 2 of your friends create 2 different apps to help decide what to do and you then need to decide how to decide
 
 https://github.com/user-attachments/assets/28d2d0c8-8875-4510-99fd-8c75feb4c6f4
 
