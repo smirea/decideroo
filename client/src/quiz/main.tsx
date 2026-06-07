@@ -1308,28 +1308,16 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 		const themeSong = currentThemeSong();
 
 		return (
-			<div className='flex shrink-0 items-center gap-2'>
-				<div className='group relative'>
-					<button
-						aria-label={themeSongPlaying ? `Pause ${themeSong.title}` : `Play ${themeSong.title}`}
-						aria-pressed={themeSongPlaying}
-						className='flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-neutral-950 bg-white text-neutral-950 shadow-[3px_3px_0_#171717] active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0_#171717]'
-						onClick={toggleThemeSong}
-						type='button'
-					>
-						{themeSongPlaying ? <SpeakerHigh size={21} weight='fill' /> : <SpeakerSlash size={21} weight='fill' />}
-					</button>
-					<span
-						className={`pointer-events-none absolute left-full top-1/2 z-50 ml-3 max-w-56 -translate-y-1/2 truncate rounded-lg border-2 border-neutral-950 bg-white px-3 py-2 text-xs font-black text-neutral-950 shadow-[3px_3px_0_#171717] transition-all duration-300 ease-out ${
-							themeSongTooltipVisible
-								? 'translate-x-0 scale-100 opacity-100'
-								: 'translate-x-3 scale-95 opacity-0 group-hover:translate-x-0 group-hover:scale-100 group-hover:opacity-100'
-						}`}
-						role='tooltip'
-					>
-						{themeSong.title}
-					</span>
-				</div>
+			<div className='relative flex shrink-0 items-center gap-2'>
+				<button
+					aria-label={themeSongPlaying ? `Pause ${themeSong.title}` : `Play ${themeSong.title}`}
+					aria-pressed={themeSongPlaying}
+					className='peer flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-neutral-950 bg-white text-neutral-950 shadow-[3px_3px_0_#171717] active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0_#171717]'
+					onClick={toggleThemeSong}
+					type='button'
+				>
+					{themeSongPlaying ? <SpeakerHigh size={21} weight='fill' /> : <SpeakerSlash size={21} weight='fill' />}
+				</button>
 				<button
 					aria-label='Play next theme song'
 					className='flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-neutral-950 bg-white text-neutral-950 shadow-[3px_3px_0_#171717] active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0_#171717]'
@@ -1338,6 +1326,12 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 				>
 					<SkipForward size={21} weight='fill' />
 				</button>
+				<span
+					className={`theme-song-tooltip ${themeSongTooltipVisible ? 'theme-song-tooltip-visible' : ''}`}
+					role='tooltip'
+				>
+					{themeSong.title}
+				</span>
 			</div>
 		);
 	}
