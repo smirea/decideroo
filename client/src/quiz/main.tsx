@@ -1,4 +1,4 @@
-import { Boot, Headphones, SpeakerHigh, SpeakerSlash, UserCircle } from '@phosphor-icons/react';
+import { Boot, Headphones, SkipForward, SpeakerHigh, SpeakerSlash, UserCircle } from '@phosphor-icons/react';
 import {
 	Suspense,
 	useCallback,
@@ -32,10 +32,23 @@ import { twentyFortyEightQuiz } from './twentyFortyEight.tsx';
 import { VersusIntro } from './versusIntro.tsx';
 
 export const quizzes = [tinderSwipeQuiz, diceRollQuiz, twentyFortyEightQuiz, asteroidsQuiz, cockpitQuiz] as const;
-const themeSongUrl = '/decidaroo.mp3';
+const themeSongs = [
+	{
+		title: 'Too many ways to decide how to decide',
+		file: 'Decideroo - Too many ways to decide how to decide.mp3',
+	},
+	{ title: 'Beckam goes in the army', file: 'Decideroo - Beckam goes in the army.mp3' },
+	{
+		title: 'Take my shoes off with my eyes closed',
+		file: 'Decideroo - Take my shoes off with my eyes closed.mp3',
+	},
+	{ title: "Can't tell your mouth from your butt", file: "Decideroo - Can't tell your mouth from your butt.mp3" },
+] as const;
 const versusSoundUrl = '/sfx/vs-intro.wav';
 const soundChoiceSkipMs = 24 * 60 * 60 * 1000;
+const themeSongTooltipMs = 3200;
 const emptyKickVotes: GameState['kickVotes'] = {};
+type ThemeSong = (typeof themeSongs)[number];
 
 declare global {
 	interface Window {
@@ -142,6 +155,35 @@ function readStoredSoundOn() {
 
 function writeStoredSoundOn(on: boolean) {
 	LS.set({ 'sound-on': { on, at: Date.now() } });
+}
+
+function nextThemeSongIndex(index: number) {
+	return (index + 1) % themeSongs.length;
+}
+
+function themeSongUrl(song: ThemeSong) {
+	return `/songs/${encodeURIComponent(song.file)}`;
+}
+
+function readInitialThemeSongIndex() {
+	try {
+		const lastTitle = LS.get('last-theme-song');
+
+		if (lastTitle === undefined) return 0;
+		if (typeof lastTitle !== 'string') {
+			LS.delete('last-theme-song');
+			return 0;
+		}
+
+		const lastIndex = themeSongs.findIndex(song => song.title === lastTitle);
+		return lastIndex === -1 ? 0 : nextThemeSongIndex(lastIndex);
+	} catch {
+		return 0;
+	}
+}
+
+function writeLastThemeSong(song: ThemeSong) {
+	LS.set({ 'last-theme-song': song.title });
 }
 
 function readStoredPlayerName() {
@@ -798,10 +840,14 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 	});
 	const [soundOn, setSoundOn] = useState(readStoredSoundOn);
 	const [themeSongPlaying, setThemeSongPlaying] = useState(false);
+	const [themeSongIndex, setThemeSongIndex] = useState(readInitialThemeSongIndex);
+	const [themeSongTooltipVisible, setThemeSongTooltipVisible] = useState(false);
 	const [showVersusIntro, setShowVersusIntro] = useState(!skipIntro && !hasInitialPlayerName);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const versusAudioRef = useRef<HTMLAudioElement | null>(null);
 	const themeSongPlayPendingRef = useRef(false);
+	const themeSongIndexRef = useRef(themeSongIndex);
+	const themeSongTooltipTimeoutRef = useRef<number | null>(null);
 	const versusSoundAttemptedRef = useRef(false);
 
 	const finalPoints = sumOptionPoints(results.map(result => result.points));
@@ -970,9 +1016,10 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 	useEffect(() => {
 		const audio = document.createElement('audio');
 		const versusAudio = document.createElement('audio');
+		const initialThemeSong = themeSongs[themeSongIndexRef.current];
 
-		audio.src = themeSongUrl;
-		audio.loop = true;
+		audio.src = themeSongUrl(initialThemeSong);
+		audio.dataset.themeSongIndex = String(themeSongIndexRef.current);
 		audio.preload = 'auto';
 		audio.hidden = true;
 		audio.setAttribute('aria-hidden', 'true');
@@ -980,11 +1027,18 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 		versusAudio.preload = 'auto';
 		versusAudio.hidden = true;
 		versusAudio.setAttribute('aria-hidden', 'true');
-		const markThemeSongPlaying = () => setThemeSongPlaying(true);
+		const markThemeSongPlaying = () => {
+			const themeSong = themeSongs[themeSongIndexRef.current];
+
+			writeLastThemeSong(themeSong);
+			setThemeSongPlaying(true);
+			showThemeSongTooltip();
+		};
 		const markThemeSongStopped = () => setThemeSongPlaying(false);
+		const playNextThemeSong = () => void loadNextThemeSong(true);
 		audio.addEventListener('playing', markThemeSongPlaying);
 		audio.addEventListener('pause', markThemeSongStopped);
-		audio.addEventListener('ended', markThemeSongStopped);
+		audio.addEventListener('ended', playNextThemeSong);
 		audioRef.current = audio;
 		versusAudioRef.current = versusAudio;
 		document.body.append(audio, versusAudio);
@@ -994,13 +1048,14 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 		return () => {
 			audio.removeEventListener('playing', markThemeSongPlaying);
 			audio.removeEventListener('pause', markThemeSongStopped);
-			audio.removeEventListener('ended', markThemeSongStopped);
+			audio.removeEventListener('ended', playNextThemeSong);
 			audio.pause();
 			versusAudio.pause();
 			audio.remove();
 			versusAudio.remove();
 			audioRef.current = null;
 			versusAudioRef.current = null;
+			clearThemeSongTooltip();
 		};
 	}, []);
 
@@ -1085,6 +1140,49 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 		setScreenIndex(0);
 		setQuizIndex(current => current + 1);
 		savePlayerProgress(nextProgress);
+	}
+
+	function currentThemeSong() {
+		return themeSongs[themeSongIndexRef.current];
+	}
+
+	function clearThemeSongTooltip() {
+		if (themeSongTooltipTimeoutRef.current) window.clearTimeout(themeSongTooltipTimeoutRef.current);
+		themeSongTooltipTimeoutRef.current = null;
+		setThemeSongTooltipVisible(false);
+	}
+
+	function showThemeSongTooltip() {
+		if (themeSongTooltipTimeoutRef.current) window.clearTimeout(themeSongTooltipTimeoutRef.current);
+
+		setThemeSongTooltipVisible(true);
+		themeSongTooltipTimeoutRef.current = window.setTimeout(() => {
+			themeSongTooltipTimeoutRef.current = null;
+			setThemeSongTooltipVisible(false);
+		}, themeSongTooltipMs);
+	}
+
+	function loadThemeSong(index: number) {
+		const nextIndex = ((index % themeSongs.length) + themeSongs.length) % themeSongs.length;
+		const audio = audioRef.current;
+
+		themeSongIndexRef.current = nextIndex;
+		setThemeSongIndex(nextIndex);
+
+		if (!audio) return;
+
+		audio.pause();
+		audio.dataset.themeSongIndex = String(nextIndex);
+		audio.src = themeSongUrl(themeSongs[nextIndex]);
+		audio.currentTime = 0;
+		audio.load();
+	}
+
+	function loadNextThemeSong(playAfterLoad = themeSongPlaying || soundOn) {
+		loadThemeSong(nextThemeSongIndex(themeSongIndexRef.current));
+		if (!playAfterLoad) return;
+
+		void playThemeSong();
 	}
 
 	async function playThemeSong() {
@@ -1185,6 +1283,10 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 		void playThemeSong();
 	}
 
+	function nextThemeSong() {
+		loadNextThemeSong();
+	}
+
 	useEffect(() => {
 		if (
 			soundState.showIntro ||
@@ -1203,16 +1305,40 @@ export function QuizPage({ quizSet = quizzes, skipIntro = false }: QuizPageProps
 	}, [showPlayerName, showVersusIntro, soundState.showIntro, soundState.stored]);
 
 	function SoundButton() {
+		const themeSong = currentThemeSong();
+
 		return (
-			<button
-				aria-label={themeSongPlaying ? 'Turn theme song off' : 'Turn theme song on'}
-				aria-pressed={themeSongPlaying}
-				className='flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-neutral-950 bg-white text-neutral-950 shadow-[3px_3px_0_#171717] active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0_#171717]'
-				onClick={toggleThemeSong}
-				type='button'
-			>
-				{themeSongPlaying ? <SpeakerHigh size={21} weight='fill' /> : <SpeakerSlash size={21} weight='fill' />}
-			</button>
+			<div className='flex shrink-0 items-center gap-2'>
+				<div className='group relative'>
+					<button
+						aria-label={themeSongPlaying ? `Pause ${themeSong.title}` : `Play ${themeSong.title}`}
+						aria-pressed={themeSongPlaying}
+						className='flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-neutral-950 bg-white text-neutral-950 shadow-[3px_3px_0_#171717] active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0_#171717]'
+						onClick={toggleThemeSong}
+						type='button'
+					>
+						{themeSongPlaying ? <SpeakerHigh size={21} weight='fill' /> : <SpeakerSlash size={21} weight='fill' />}
+					</button>
+					<span
+						className={`pointer-events-none absolute left-full top-1/2 z-50 ml-3 max-w-56 -translate-y-1/2 truncate rounded-lg border-2 border-neutral-950 bg-white px-3 py-2 text-xs font-black text-neutral-950 shadow-[3px_3px_0_#171717] transition-all duration-300 ease-out ${
+							themeSongTooltipVisible
+								? 'translate-x-0 scale-100 opacity-100'
+								: 'translate-x-3 scale-95 opacity-0 group-hover:translate-x-0 group-hover:scale-100 group-hover:opacity-100'
+						}`}
+						role='tooltip'
+					>
+						{themeSong.title}
+					</span>
+				</div>
+				<button
+					aria-label='Play next theme song'
+					className='flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-neutral-950 bg-white text-neutral-950 shadow-[3px_3px_0_#171717] active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0_#171717]'
+					onClick={nextThemeSong}
+					type='button'
+				>
+					<SkipForward size={21} weight='fill' />
+				</button>
+			</div>
 		);
 	}
 

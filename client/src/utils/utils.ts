@@ -11,6 +11,7 @@ type StoredSoundToggle = {
 };
 
 type DecidarooLocalStorage = {
+	'last-theme-song'?: string;
 	'sound-choice'?: StoredSoundChoice;
 	'sound-on'?: StoredSoundToggle;
 	'player-name'?: string;
